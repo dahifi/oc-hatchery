@@ -36,4 +36,4 @@ Docker builds may fail in CI environments with strict network policies.
 
 The `fleet.sh status` command previously used `grep -oP` (Perl regex) which is not available on macOS by default.
 
-**Status:** Fixed in commit 53f118c with POSIX-compatible sed alternative.
+**Status:** Fixed with POSIX-compatible sed alternative.
