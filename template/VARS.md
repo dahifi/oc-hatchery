@@ -57,11 +57,11 @@ docker compose logs
 
 ```bash
 # Required: At least one LLM provider
-ANTHROPIC_API_KEY=sk-ant-your-key-here
+ANTHROPIC_API_KEY=your-anthropic-api-key-here
 
 # Optional: Additional LLM providers
-# OPENAI_API_KEY=sk-your-openai-key-here
-# XAI_API_KEY=xai-your-key-here
+# OPENAI_API_KEY=your-openai-api-key-here
+# XAI_API_KEY=your-xai-api-key-here
 # GOOGLE_API_KEY=your-google-api-key
 
 # Optional: Discord integration

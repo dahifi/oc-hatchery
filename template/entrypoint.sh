@@ -16,11 +16,6 @@ if [[ ! -f "$TEMPLATE_FILE" ]]; then
 else
   echo "📝 Processing config template with envsubst..."
   
-  # Define required environment variables
-  REQUIRED_VARS=(
-    "ANTHROPIC_API_KEY"
-  )
-  
   # Check for at least one LLM API key
   if [[ -z "${ANTHROPIC_API_KEY:-}" ]] && [[ -z "${OPENAI_API_KEY:-}" ]] && [[ -z "${XAI_API_KEY:-}" ]] && [[ -z "${GOOGLE_API_KEY:-}" ]]; then
     echo "❌ ERROR: At least one LLM API key must be set:"
