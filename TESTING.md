@@ -147,7 +147,30 @@ If you see errors like "TLS: unspecified error" when building:
 1. Check logs: `docker compose logs`
 2. Verify port is not already in use: `lsof -i :18790`
 3. Check if API keys are set in .env
-4. Try accessing directly: `docker exec -it hatchery-my-advisor openclaw --version`
+4. Verify OpenClaw installed correctly:
+   ```bash
+   docker exec -it hatchery-my-advisor openclaw --version
+   ```
+5. Try accessing directly: `docker exec -it hatchery-my-advisor sh`
+
+### OpenClaw Installation Issues
+
+If the container builds but OpenClaw doesn't work:
+
+1. Check if openclaw is installed:
+   ```bash
+   docker exec hatchery-my-advisor which openclaw
+   ```
+2. Try running openclaw directly:
+   ```bash
+   docker exec hatchery-my-advisor openclaw --help
+   ```
+3. Check npm global packages:
+   ```bash
+   docker exec hatchery-my-advisor npm list -g
+   ```
+
+See [KNOWN_ISSUES.md](KNOWN_ISSUES.md) for more details.
 
 ### Port Already in Use
 

@@ -23,15 +23,22 @@ oc-hatchery/
 
 ## Usage
 
+**Quick start:** See [QUICKSTART.md](QUICKSTART.md) for a detailed step-by-step guide.
+
 ```bash
 # Scaffold an instance
 ./scripts/hatch.sh my-advisor --port 18790
 
-# Edit workspace files (SOUL.md, IDENTITY.md, USER.md, etc.)
-# Add API keys to .env
-# Launch
-cd instances/my-advisor && docker compose up -d
+# Configure and launch
+cd instances/my-advisor
+cp .env.example .env
+# Edit .env and add API keys
+docker compose up -d --build
+
+# Access at http://localhost:18790
 ```
+
+For detailed instructions, customization options, and troubleshooting, see [QUICKSTART.md](QUICKSTART.md).
 
 ## Testing
 
