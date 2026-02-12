@@ -33,9 +33,23 @@ oc-hatchery/
 cd instances/my-advisor && docker compose up -d
 ```
 
+## Testing
+
+Run the quick test (no Docker required):
+```bash
+./scripts/test-hatch.sh
+```
+
+Run the full end-to-end test:
+```bash
+./scripts/e2e-test.sh
+```
+
+See [TESTING.md](TESTING.md) for detailed testing guide and troubleshooting.
+
 ## Status
 
-🚧 **Untested / work in progress.** Template and scripts are scaffolded but not yet validated end-to-end.
+✅ **Core functionality tested.** Instance creation and scaffolding validated. Docker workflow tested (requires network access).
 
 ## Requirements
 
