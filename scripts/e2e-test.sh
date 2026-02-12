@@ -139,10 +139,14 @@ cp "$INSTANCE_DIR/.env.example" "$INSTANCE_DIR/.env"
 
 # Check if we have any API keys in environment
 if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
-  sed -i "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}|" "$INSTANCE_DIR/.env"
+  # Use portable sed (works on both Linux and macOS)
+  sed -i.bak "s|^ANTHROPIC_API_KEY=.*|ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}|" "$INSTANCE_DIR/.env"
+  rm -f "$INSTANCE_DIR/.env.bak"
   log_info "Using ANTHROPIC_API_KEY from environment"
 elif [[ -n "${OPENAI_API_KEY:-}" ]]; then
-  sed -i "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=${OPENAI_API_KEY}|" "$INSTANCE_DIR/.env"
+  # Use portable sed (works on both Linux and macOS)
+  sed -i.bak "s|^OPENAI_API_KEY=.*|OPENAI_API_KEY=${OPENAI_API_KEY}|" "$INSTANCE_DIR/.env"
+  rm -f "$INSTANCE_DIR/.env.bak"
   log_info "Using OPENAI_API_KEY from environment"
 else
   log_warn "No API keys found in environment. Container will start but may not be fully functional."
@@ -249,7 +253,8 @@ fi
 if echo "$FLEET_OUTPUT" | grep -q "running"; then
   test_pass "Instance status shows as running"
 else
-  test_warn "Instance may not be showing as running in fleet status"
+  log_warn "Instance may not be showing as running in fleet status"
+  # Don't fail the test, just log a warning
 fi
 
 # Test 11: Test docker compose down
