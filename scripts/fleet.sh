@@ -21,7 +21,8 @@ case "$CMD" in
     for dir in "$INSTANCES_DIR"/*/; do
       name="$(basename "$dir")"
       if [[ -f "$dir/docker-compose.yml" ]]; then
-        port=$(grep -oP '\d+(?=:18789)' "$dir/docker-compose.yml" 2>/dev/null || echo "?")
+        # Extract port using sed (POSIX-compatible for macOS/Linux)
+        port=$(sed -n 's/.*"\([0-9]*\):18789".*/\1/p' "$dir/docker-compose.yml" 2>/dev/null || echo "?")
         container="hatchery-${name}"
         state=$(docker inspect -f '{{.State.Status}}' "$container" 2>/dev/null || echo "not created")
         printf "  %-30s port=%-6s state=%s\n" "$name" "$port" "$state"

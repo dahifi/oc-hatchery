@@ -9,8 +9,13 @@ RUN addgroup -g 1001 -S openclaw && \
 
 WORKDIR /home/openclaw
 
-# Install OpenClaw globally
-RUN npm install -g openclaw@latest
+# Install OpenClaw globally with verbose logging
+# Note: If openclaw package doesn't exist on npm, this will fail with a clear error
+RUN npm install -g openclaw@latest --verbose || \
+    (echo "ERROR: Failed to install openclaw@latest from npm" && \
+     echo "This likely means the package doesn't exist or isn't published yet" && \
+     echo "Check https://www.npmjs.com/package/openclaw for availability" && \
+     exit 1)
 
 # Create state directory structure
 RUN mkdir -p /home/openclaw/.openclaw/workspace && \

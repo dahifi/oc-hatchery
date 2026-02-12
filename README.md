@@ -21,21 +21,70 @@ oc-hatchery/
 │   └── fleet.sh               # Manage running instances
 ```
 
-## Usage
+## Quick Start
+
+### Prerequisites
+- Docker 20.10+ and Docker Compose v2.0+
+- At least one LLM API key (Anthropic, OpenAI, etc.)
+
+### Get Started in 5 Steps
 
 ```bash
-# Scaffold an instance
+# 1. Create an instance
 ./scripts/hatch.sh my-advisor --port 18790
 
-# Edit workspace files (SOUL.md, IDENTITY.md, USER.md, etc.)
-# Add API keys to .env
-# Launch
-cd instances/my-advisor && docker compose up -d
+# 2. Configure API keys
+cd instances/my-advisor
+cp .env.example .env
+# Edit .env and add your ANTHROPIC_API_KEY or OPENAI_API_KEY
+
+# 3. Launch
+docker compose up -d --build
+
+# 4. Verify (wait ~30s for startup)
+curl http://localhost:18790/health
+
+# 5. Access the TUI
+open http://localhost:18790  # or visit in browser
 ```
+
+### Customize (Optional)
+
+Edit workspace files to define personality and behavior:
+- `workspace/SOUL.md` — personality and expertise
+- `workspace/IDENTITY.md` — name, role, emoji
+- `workspace/USER.md` — who this instance helps
+- `workspace/reference/` — add reference documents
+
+### Manage Instances
+
+```bash
+# View all instances
+./scripts/fleet.sh status
+
+# Stop when done
+cd instances/my-advisor && docker compose down
+```
+
+See [TESTING.md](TESTING.md) for troubleshooting.
+
+## Testing
+
+Run the quick test (no Docker required):
+```bash
+./scripts/test-hatch.sh
+```
+
+Run the full end-to-end test:
+```bash
+./scripts/e2e-test.sh
+```
+
+See [TESTING.md](TESTING.md) for detailed testing guide and troubleshooting.
 
 ## Status
 
-🚧 **Untested / work in progress.** Template and scripts are scaffolded but not yet validated end-to-end.
+🚧 **Work in progress.** Scaffolding validated, Docker workflow under test.
 
 ## Requirements
 
