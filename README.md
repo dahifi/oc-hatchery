@@ -56,6 +56,18 @@ Edit workspace files to define personality and behavior:
 - `workspace/USER.md` — who this instance helps
 - `workspace/reference/` — add reference documents
 
+### Configuration & Secrets
+
+Each instance uses environment variable templating for secure configuration:
+
+- **`.env`** — Your API keys and secrets (never committed)
+- **`openclaw.template.json`** — Config template with `$VARIABLE` placeholders
+- **`openclaw.json`** — Generated at runtime (never committed)
+
+At container startup, the entrypoint script runs `envsubst` to replace variables like `$ANTHROPIC_API_KEY` with values from your `.env` file. This ensures secrets are never stored in version control.
+
+See [`template/VARS.md`](template/VARS.md) for a complete list of supported environment variables.
+
 ### Manage Instances
 
 ```bash
