@@ -6,12 +6,14 @@ Get your first OpenClaw instance running in under 5 minutes.
 
 Ensure you have:
 - Docker and Docker Compose installed
+  - Docker 20.10+ (for BuildKit support and modern features)
+  - Docker Compose v2.0+ (uses `docker compose` command, not `docker-compose`)
 - At least one LLM API key (Anthropic, OpenAI, etc.)
 
 ```bash
 # Verify installations
-docker --version      # Should show v20.10+
-docker compose version  # Should show v2.0+
+docker --version      # Should show v20.10 or later
+docker compose version  # Should show v2.0 or later (not v1.x)
 ```
 
 ## 2. Create an Instance

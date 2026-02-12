@@ -8,9 +8,10 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 
 # Test configuration
-TEST_INSTANCE="test-instance"
+TEST_INSTANCE_NAME="test-instance"
 TEST_PORT="18790"
-INSTANCE_DIR="$ROOT_DIR/instances/$TEST_INSTANCE"
+INSTANCE_DIR="$ROOT_DIR/instances/$TEST_INSTANCE_NAME"
+DOCKER_BUILD_LOG="/tmp/docker-build-$$.log"
 
 # Colors for output
 RED='\033[0;31m'
@@ -51,7 +52,7 @@ cleanup() {
   
   if [[ -d "$INSTANCE_DIR" ]]; then
     # Stop and remove container if running
-    if docker ps -a | grep -q "hatchery-${TEST_INSTANCE}"; then
+    if docker ps -a | grep -q "hatchery-${TEST_INSTANCE_NAME}"; then
       log_info "Stopping and removing container..."
       (cd "$INSTANCE_DIR" && docker compose down -v) || true
     fi
@@ -60,6 +61,9 @@ cleanup() {
     log_info "Removing instance directory..."
     rm -rf "$INSTANCE_DIR"
   fi
+  
+  # Remove temporary log file
+  rm -f "$DOCKER_BUILD_LOG"
   
   log_info "Cleanup complete"
 }
@@ -75,7 +79,7 @@ echo ""
 
 # Test 1: hatch.sh creates instance
 log_info "Test 1: Running hatch.sh to create instance..."
-if "$SCRIPT_DIR/hatch.sh" "$TEST_INSTANCE" --port "$TEST_PORT"; then
+if "$SCRIPT_DIR/hatch.sh" "$TEST_INSTANCE_NAME" --port "$TEST_PORT"; then
   test_pass "hatch.sh created instance successfully"
 else
   test_fail "hatch.sh failed to create instance"
@@ -126,8 +130,8 @@ fi
 
 # Test 4: Verify container name in docker-compose.yml
 log_info "Test 4: Verifying container name..."
-if grep -q "hatchery-${TEST_INSTANCE}" "$INSTANCE_DIR/docker-compose.yml"; then
-  test_pass "Container name correctly set to hatchery-${TEST_INSTANCE}"
+if grep -q "hatchery-${TEST_INSTANCE_NAME}" "$INSTANCE_DIR/docker-compose.yml"; then
+  test_pass "Container name correctly set to hatchery-${TEST_INSTANCE_NAME}"
 else
   test_fail "Container name incorrect"
   exit 1
@@ -160,13 +164,13 @@ log_info "Test 6: Building and starting container..."
 log_info "This may take a few minutes for first build..."
 
 DOCKER_BUILD_FAILED=false
-if (cd "$INSTANCE_DIR" && docker compose up -d --build 2>&1 | tee /tmp/docker-build.log); then
+if (cd "$INSTANCE_DIR" && docker compose up -d --build 2>&1 | tee "$DOCKER_BUILD_LOG"); then
   test_pass "Container built and started successfully"
 else
   DOCKER_BUILD_FAILED=true
   
   # Check if it's a network/TLS error (common in CI environments)
-  if grep -q "TLS: unspecified error\|unable to select packages\|network" /tmp/docker-build.log; then
+  if grep -q "TLS: unspecified error\|unable to select packages\|network" "$DOCKER_BUILD_LOG"; then
     log_warn "Docker build failed due to network/TLS issues (common in restricted environments)"
     log_warn "This is likely an infrastructure issue, not a code issue"
     test_fail "Failed to build container (network issue - skipping remaining tests)"
@@ -195,14 +199,14 @@ WAIT_COUNT=0
 HEALTHY=false
 
 while [[ $WAIT_COUNT -lt $MAX_WAIT ]]; do
-  HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "hatchery-${TEST_INSTANCE}" 2>/dev/null || echo "unknown")
+  HEALTH=$(docker inspect --format='{{.State.Health.Status}}' "hatchery-${TEST_INSTANCE_NAME}" 2>/dev/null || echo "unknown")
   
   if [[ "$HEALTH" == "healthy" ]]; then
     HEALTHY=true
     break
   elif [[ "$HEALTH" == "unhealthy" ]]; then
     log_error "Container became unhealthy"
-    docker logs "hatchery-${TEST_INSTANCE}" || true
+    docker logs "hatchery-${TEST_INSTANCE_NAME}" || true
     break
   fi
   
@@ -217,7 +221,7 @@ if $HEALTHY; then
 else
   test_fail "Container health check failed or timed out (status: $HEALTH)"
   log_info "Container logs:"
-  docker logs "hatchery-${TEST_INSTANCE}" || true
+  docker logs "hatchery-${TEST_INSTANCE_NAME}" || true
   exit 1
 fi
 
@@ -244,7 +248,7 @@ log_info "Test 10: Testing fleet.sh status..."
 FLEET_OUTPUT=$("$SCRIPT_DIR/fleet.sh" status)
 echo "$FLEET_OUTPUT"
 
-if echo "$FLEET_OUTPUT" | grep -q "$TEST_INSTANCE"; then
+if echo "$FLEET_OUTPUT" | grep -q "$TEST_INSTANCE_NAME"; then
   test_pass "fleet.sh status shows test instance"
 else
   test_fail "fleet.sh status doesn't show test instance"
@@ -266,7 +270,7 @@ else
 fi
 
 # Verify container is stopped
-if docker ps -a | grep -q "hatchery-${TEST_INSTANCE}"; then
+if docker ps -a | grep -q "hatchery-${TEST_INSTANCE_NAME}"; then
   test_fail "Container still exists after docker compose down"
 else
   test_pass "Container successfully removed"
