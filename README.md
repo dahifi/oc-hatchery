@@ -84,7 +84,7 @@ See [TESTING.md](TESTING.md) for detailed testing guide and troubleshooting.
 
 ## Status
 
-✅ **Core functionality tested.** Instance creation and scaffolding validated. Docker workflow tested (requires network access).
+🚧 **Work in progress.** Scaffolding validated, Docker workflow under test.
 
 ## Requirements
 
