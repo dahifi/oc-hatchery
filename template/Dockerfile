@@ -1,7 +1,7 @@
 # OpenClaw Quickstart Dockerfile
 FROM node:22-alpine
 
-RUN apk add --no-cache git curl bash
+RUN apk add --no-cache git curl bash gettext
 
 # Create openclaw user
 RUN addgroup -g 1001 -S openclaw && \
@@ -21,6 +21,11 @@ RUN npm install -g openclaw@latest --verbose || \
 RUN mkdir -p /home/openclaw/.openclaw/workspace && \
     chown -R openclaw:openclaw /home/openclaw
 
+# Copy config template and entrypoint script
+COPY --chown=openclaw:openclaw openclaw.template.json /home/openclaw/.openclaw/
+COPY entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
 USER openclaw
 
 ENV NODE_ENV=production
@@ -30,6 +35,8 @@ EXPOSE 18789
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:18789/health || exit 1
+
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
 
 # bind=lan so it listens on 0.0.0.0 inside the container
 CMD ["openclaw", "gateway", "--port", "18789", "--bind", "lan"]

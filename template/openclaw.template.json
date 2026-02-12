@@ -1,0 +1,16 @@
+{
+  "llm": {
+    "provider": "anthropic",
+    "apiKey": "$ANTHROPIC_API_KEY",
+    "model": "claude-3-5-sonnet-20241022"
+  },
+  "discord": {
+    "enabled": false,
+    "token": "$DISCORD_BOT_TOKEN",
+    "clientId": "$DISCORD_CLIENT_ID"
+  },
+  "gateway": {
+    "port": 18789,
+    "host": "0.0.0.0"
+  }
+}
