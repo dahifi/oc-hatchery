@@ -21,24 +21,52 @@ oc-hatchery/
 │   └── fleet.sh               # Manage running instances
 ```
 
-## Usage
+## Quick Start
 
-**Quick start:** See [QUICKSTART.md](QUICKSTART.md) for a detailed step-by-step guide.
+### Prerequisites
+- Docker 20.10+ and Docker Compose v2.0+
+- At least one LLM API key (Anthropic, OpenAI, etc.)
+
+### Get Started in 5 Steps
 
 ```bash
-# Scaffold an instance
+# 1. Create an instance
 ./scripts/hatch.sh my-advisor --port 18790
 
-# Configure and launch
+# 2. Configure API keys
 cd instances/my-advisor
 cp .env.example .env
-# Edit .env and add API keys
+# Edit .env and add your ANTHROPIC_API_KEY or OPENAI_API_KEY
+
+# 3. Launch
 docker compose up -d --build
 
-# Access at http://localhost:18790
+# 4. Verify (wait ~30s for startup)
+curl http://localhost:18790/health
+
+# 5. Access the TUI
+open http://localhost:18790  # or visit in browser
 ```
 
-For detailed instructions, customization options, and troubleshooting, see [QUICKSTART.md](QUICKSTART.md).
+### Customize (Optional)
+
+Edit workspace files to define personality and behavior:
+- `workspace/SOUL.md` — personality and expertise
+- `workspace/IDENTITY.md` — name, role, emoji
+- `workspace/USER.md` — who this instance helps
+- `workspace/reference/` — add reference documents
+
+### Manage Instances
+
+```bash
+# View all instances
+./scripts/fleet.sh status
+
+# Stop when done
+cd instances/my-advisor && docker compose down
+```
+
+See [TESTING.md](TESTING.md) for troubleshooting.
 
 ## Testing
 

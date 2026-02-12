@@ -77,6 +77,26 @@ echo "🦞 Hatchery End-to-End Test"
 echo "========================================"
 echo ""
 
+# Test 0: Check if test port is available
+log_info "Test 0: Checking if port ${TEST_PORT} is available..."
+if command -v lsof > /dev/null 2>&1; then
+  if lsof -Pi :${TEST_PORT} -sTCP:LISTEN -t >/dev/null 2>&1; then
+    log_error "Port ${TEST_PORT} is already in use"
+    echo "Use a different port or stop the process using this port:"
+    lsof -Pi :${TEST_PORT} -sTCP:LISTEN 2>/dev/null || true
+    exit 1
+  fi
+elif command -v netstat > /dev/null 2>&1; then
+  if netstat -an | grep -q ":${TEST_PORT}.*LISTEN"; then
+    log_error "Port ${TEST_PORT} is already in use"
+    echo "Use a different port or stop the process using this port"
+    exit 1
+  fi
+else
+  log_warn "Cannot check port availability (lsof/netstat not found), proceeding anyway"
+fi
+test_pass "Port ${TEST_PORT} is available"
+
 # Test 1: hatch.sh creates instance
 log_info "Test 1: Running hatch.sh to create instance..."
 if "$SCRIPT_DIR/hatch.sh" "$TEST_INSTANCE_NAME" --port "$TEST_PORT"; then
@@ -236,11 +256,17 @@ fi
 
 # Test 9: Verify TUI is accessible
 log_info "Test 9: Testing TUI accessibility..."
-if curl -s "http://localhost:${TEST_PORT}/" | grep -q "OpenClaw" || curl -s "http://localhost:${TEST_PORT}/" > /dev/null; then
-  test_pass "TUI accessible at http://localhost:${TEST_PORT}/"
+TUI_RESPONSE=$(curl -s "http://localhost:${TEST_PORT}/" 2>/dev/null)
+if [[ -n "$TUI_RESPONSE" ]]; then
+  # Check for expected content patterns (OpenClaw, html, or gateway indicators)
+  if echo "$TUI_RESPONSE" | grep -qi -e "openclaw" -e "<html" -e "gateway"; then
+    test_pass "TUI accessible at http://localhost:${TEST_PORT}/ with expected content"
+  else
+    log_warn "TUI endpoint returned content but without expected markers"
+    test_pass "TUI endpoint reachable (response received)"
+  fi
 else
-  log_warn "TUI response doesn't contain expected content, but endpoint is reachable"
-  test_pass "TUI endpoint accessible (content may vary)"
+  test_fail "TUI endpoint not accessible or returned empty response"
 fi
 
 # Test 10: Verify fleet.sh status shows the instance
