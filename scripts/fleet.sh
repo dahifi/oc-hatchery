@@ -68,7 +68,6 @@ case "$CMD" in
         
         container="hatchery-${name}"
         state=$(docker inspect -f '{{.State.Status}}' "$container" 2>/dev/null || echo "not-created")
-        # Remove any newlines from state
         state=$(echo "$state" | tr -d '\n')
         uptime=$(get_uptime "$container")
         

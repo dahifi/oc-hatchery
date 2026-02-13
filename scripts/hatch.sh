@@ -121,10 +121,9 @@ EOF
 
 # Update fleet registry
 tmp_file=$(mktemp)
-cat "$FLEET_REGISTRY" | \
-  jq --arg name "$NAME" --arg port "$PORT" --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    '.instances[$name] = {port: ($port | tonumber), created: $created}' \
-  > "$tmp_file" && mv "$tmp_file" "$FLEET_REGISTRY"
+jq --arg name "$NAME" --arg port "$PORT" --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '.instances[$name] = {port: ($port | tonumber), created: $created}' \
+  "$FLEET_REGISTRY" > "$tmp_file" && mv "$tmp_file" "$FLEET_REGISTRY"
 
 echo ""
 if [[ "$AUTO_PORT" == "true" ]]; then
