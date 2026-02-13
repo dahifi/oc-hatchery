@@ -8,9 +8,11 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
 TEMPLATE_DIR="$ROOT_DIR/template"
 INSTANCES_DIR="$ROOT_DIR/instances"
+FLEET_REGISTRY="$ROOT_DIR/fleet.json"
 
 NAME="${1:?Usage: hatch.sh <name> [--port PORT]}"
-PORT=18789
+PORT=""
+AUTO_PORT=false
 
 shift
 while [[ $# -gt 0 ]]; do
@@ -19,6 +21,39 @@ while [[ $# -gt 0 ]]; do
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
+
+# Initialize fleet registry if it doesn't exist
+if [[ ! -f "$FLEET_REGISTRY" ]]; then
+  echo '{"instances":{}}' > "$FLEET_REGISTRY"
+fi
+
+# Auto-assign port if not specified
+if [[ -z "$PORT" ]]; then
+  AUTO_PORT=true
+  # Find next available port starting from 18789
+  next_port=18789
+  while true; do
+    # Check if port is in use using jq
+    port_in_use=$(jq -r "[.instances[] | .port] | contains([$next_port])" "$FLEET_REGISTRY" 2>/dev/null || echo "false")
+    if [[ "$port_in_use" == "false" ]]; then
+      PORT=$next_port
+      break
+    fi
+    next_port=$((next_port + 1))
+    # Safety limit to prevent infinite loop
+    if [[ $next_port -gt 19000 ]]; then
+      echo "Error: No available ports found (reached limit)" >&2
+      exit 1
+    fi
+  done
+fi
+
+# Check if port is already in use in the registry
+port_check=$(jq -r "[.instances[] | .port] | contains([$PORT])" "$FLEET_REGISTRY" 2>/dev/null || echo "false")
+if [[ "$port_check" == "true" ]]; then
+  echo "Error: Port $PORT is already assigned in fleet.json" >&2
+  exit 1
+fi
 
 INSTANCE_DIR="$INSTANCES_DIR/$NAME"
 
@@ -84,8 +119,18 @@ Heartbeat is DISABLED.
 On every heartbeat, reply exactly: HEARTBEAT_OK
 EOF
 
+# Update fleet registry
+tmp_file=$(mktemp)
+jq --arg name "$NAME" --arg port "$PORT" --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  '.instances[$name] = {port: ($port | tonumber), created: $created}' \
+  "$FLEET_REGISTRY" > "$tmp_file" && mv "$tmp_file" "$FLEET_REGISTRY"
+
 echo ""
-echo "✅ Instance created at: $INSTANCE_DIR"
+if [[ "$AUTO_PORT" == "true" ]]; then
+  echo "✅ Instance created at: $INSTANCE_DIR (auto-assigned port $PORT)"
+else
+  echo "✅ Instance created at: $INSTANCE_DIR"
+fi
 echo ""
 echo "Next steps:"
 echo "  1. Edit workspace files (SOUL.md, IDENTITY.md, USER.md)"

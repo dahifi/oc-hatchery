@@ -6,6 +6,9 @@ instances/*/.env
 instances/*/openclaw.json
 template/openclaw.json
 
+# Fleet registry (local state)
+fleet.json
+
 # Template env (users copy to .env)
 !template/.env.example
 !instances/*/.env.example
