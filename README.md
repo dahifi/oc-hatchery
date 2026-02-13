@@ -30,8 +30,8 @@ oc-hatchery/
 ### Get Started in 5 Steps
 
 ```bash
-# 1. Create an instance
-./scripts/hatch.sh my-advisor --port 18790
+# 1. Create an instance (port auto-assigned starting from 18789)
+./scripts/hatch.sh my-advisor
 
 # 2. Configure API keys
 cd instances/my-advisor
@@ -42,10 +42,10 @@ cp .env.example .env
 docker compose up -d --build
 
 # 4. Verify (wait ~30s for startup)
-curl http://localhost:18790/health
+curl http://localhost:18789/health
 
 # 5. Access the TUI
-open http://localhost:18790  # or visit in browser
+open http://localhost:18789  # or visit in browser
 ```
 
 ### Customize (Optional)
@@ -70,13 +70,35 @@ See [`template/VARS.md`](template/VARS.md) for a complete list of supported envi
 
 ### Manage Instances
 
+Fleet management commands for easy instance control:
+
 ```bash
-# View all instances
+# View all instances with status and uptime
 ./scripts/fleet.sh status
 
-# Stop when done
+# Start all instances or a specific one
+./scripts/fleet.sh start              # all instances
+./scripts/fleet.sh start my-advisor   # specific instance
+
+# Stop all instances or a specific one
+./scripts/fleet.sh stop               # all instances
+./scripts/fleet.sh stop my-advisor    # specific instance
+
+# View logs from an instance
+./scripts/fleet.sh logs my-advisor
+
+# Update instances (pull latest image and restart)
+./scripts/fleet.sh update my-advisor  # specific instance
+./scripts/fleet.sh update --all       # all instances
+
+# Or manage individual instances directly
 cd instances/my-advisor && docker compose down
 ```
+
+**Port Management:**
+- Ports are automatically assigned starting from 18789 when creating instances
+- Manually specify a port with `./scripts/hatch.sh my-instance --port 18800`
+- Port assignments are tracked in `fleet.json` to prevent conflicts
 
 See [TESTING.md](TESTING.md) for troubleshooting.
 
