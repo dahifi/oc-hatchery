@@ -35,6 +35,9 @@ mkdir -p "$INSTANCE_DIR/workspace/memory" "$INSTANCE_DIR/workspace/reference" "$
 # Copy template files
 cp "$TEMPLATE_DIR/Dockerfile" "$INSTANCE_DIR/"
 cp "$TEMPLATE_DIR/.env.example" "$INSTANCE_DIR/.env.example"
+cp "$TEMPLATE_DIR/openclaw.template.json" "$INSTANCE_DIR/"
+cp "$TEMPLATE_DIR/entrypoint.sh" "$INSTANCE_DIR/"
+cp "$TEMPLATE_DIR/.gitignore" "$INSTANCE_DIR/.gitignore"
 
 # Generate docker-compose with correct port and container name
 sed "s/18789:18789/${PORT}:18789/g; s/openclaw-quickstart/hatchery-${NAME}/g" \

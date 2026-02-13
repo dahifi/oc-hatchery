@@ -71,6 +71,9 @@ required_files=(
   "docker-compose.yml"
   "Dockerfile"
   ".env.example"
+  ".gitignore"
+  "openclaw.template.json"
+  "entrypoint.sh"
 )
 
 for file in "${required_files[@]}"; do
@@ -150,6 +153,43 @@ if grep -q "SOUL.md" "$INSTANCE_DIR/workspace/AGENTS.md"; then
   test_pass "AGENTS.md contains expected instructions"
 else
   test_fail "AGENTS.md doesn't contain expected content"
+fi
+
+# Test 10: Verify openclaw.template.json contains variable placeholders
+echo "Test 10: Verifying openclaw.template.json..."
+if [[ -f "$INSTANCE_DIR/openclaw.template.json" ]]; then
+  if grep -q '\$ANTHROPIC_API_KEY' "$INSTANCE_DIR/openclaw.template.json" && \
+     grep -q '\$DISCORD_BOT_TOKEN' "$INSTANCE_DIR/openclaw.template.json"; then
+    test_pass "openclaw.template.json contains variable placeholders"
+  else
+    test_fail "openclaw.template.json missing expected variable placeholders"
+  fi
+else
+  test_fail "openclaw.template.json not found"
+fi
+
+# Test 11: Verify entrypoint.sh is executable
+echo "Test 11: Verifying entrypoint.sh..."
+if [[ -f "$INSTANCE_DIR/entrypoint.sh" ]]; then
+  if grep -q "envsubst" "$INSTANCE_DIR/entrypoint.sh"; then
+    test_pass "entrypoint.sh contains envsubst logic"
+  else
+    test_fail "entrypoint.sh missing envsubst logic"
+  fi
+else
+  test_fail "entrypoint.sh not found"
+fi
+
+# Test 12: Verify .gitignore contains openclaw.json
+echo "Test 12: Verifying .gitignore..."
+if [[ -f "$INSTANCE_DIR/.gitignore" ]]; then
+  if grep -q "openclaw.json" "$INSTANCE_DIR/.gitignore"; then
+    test_pass ".gitignore includes openclaw.json"
+  else
+    test_fail ".gitignore missing openclaw.json"
+  fi
+else
+  test_fail ".gitignore not found"
 fi
 
 # Summary

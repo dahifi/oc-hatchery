@@ -2,6 +2,10 @@
 instances/*/data/
 instances/*/.env
 
+# Runtime-generated configs (from templates)
+instances/*/openclaw.json
+template/openclaw.json
+
 # Template env (users copy to .env)
 !template/.env.example
 !instances/*/.env.example

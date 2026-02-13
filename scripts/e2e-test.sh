@@ -112,6 +112,9 @@ expected_files=(
   "docker-compose.yml"
   "Dockerfile"
   ".env.example"
+  ".gitignore"
+  "openclaw.template.json"
+  "entrypoint.sh"
   "workspace/AGENTS.md"
   "workspace/SOUL.md"
   "workspace/IDENTITY.md"
@@ -262,6 +265,22 @@ else
   log_info "Container logs:"
   docker logs "hatchery-${TEST_INSTANCE_NAME}" || true
   exit 1
+fi
+
+# Test 7.5: Verify config file was generated from template
+log_info "Test 7.5: Verifying envsubst config generation..."
+if docker exec "hatchery-${TEST_INSTANCE_NAME}" test -f /home/openclaw/.openclaw/openclaw.json; then
+  test_pass "openclaw.json was generated from template"
+  
+  # Verify it contains actual values, not placeholders
+  CONFIG_CONTENT=$(docker exec "hatchery-${TEST_INSTANCE_NAME}" cat /home/openclaw/.openclaw/openclaw.json || echo "{}")
+  if echo "$CONFIG_CONTENT" | grep -q '\$ANTHROPIC_API_KEY\|\$DISCORD_BOT_TOKEN'; then
+    test_fail "Config still contains unexpanded variables"
+  else
+    test_pass "Config variables were expanded by envsubst"
+  fi
+else
+  log_warn "openclaw.json not found (may not be required by OpenClaw)"
 fi
 
 # Test 8: Verify health endpoint directly
