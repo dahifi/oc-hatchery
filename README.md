@@ -87,12 +87,19 @@ Run the quick test (no Docker required):
 ./scripts/test-hatch.sh
 ```
 
+Validate the Dockerfile configuration:
+```bash
+./scripts/validate-dockerfile.sh
+```
+
 Run the full end-to-end test:
 ```bash
 ./scripts/e2e-test.sh
 ```
 
 See [TESTING.md](TESTING.md) for detailed testing guide and troubleshooting.
+
+See [DOCKERFILE_VALIDATION.md](DOCKERFILE_VALIDATION.md) for comprehensive Dockerfile validation results.
 
 ## Status
 
