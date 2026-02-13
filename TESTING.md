@@ -21,6 +21,32 @@ This test validates:
 **Time:** ~1 second  
 **Requirements:** bash
 
+## Dockerfile Validation
+
+Validates the Dockerfile configuration and best practices:
+
+```bash
+./scripts/validate-dockerfile.sh
+```
+
+This validation checks:
+- ✓ Alpine package dependencies (git, curl, bash, gettext)
+- ✓ Non-root user configuration
+- ✓ UID/GID configuration (1001)
+- ✓ Entrypoint script setup
+- ✓ Health check configuration
+- ✓ Port exposure
+- ✓ Workspace directory structure
+- ✓ Environment variable templating
+- ✓ API key validation
+- ✓ Production environment settings
+- ✓ Docker image build (if package available)
+
+**Time:** 1-3 minutes  
+**Requirements:** Docker (for full validation)
+
+See [DOCKERFILE_VALIDATION.md](DOCKERFILE_VALIDATION.md) for detailed validation results.
+
 ## End-to-End Test (Full Workflow)
 
 Tests the complete workflow from hatch to launch:
