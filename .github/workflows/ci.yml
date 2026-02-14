@@ -1,0 +1,21 @@
+name: CI - Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Docker image
+        run: docker build -t oc-hatchery-test template/
+      
+      - name: Test hatch.sh
+        run: ./scripts/hatch.sh ci-test --port 18799
+      
+      - name: Verify instance structure
+        run: |
+          test -f instances/ci-test/Dockerfile
+          test -f instances/ci-test/docker-compose.yml
+          test -f instances/ci-test/workspace/SOUL.md
