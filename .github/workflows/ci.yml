@@ -16,6 +16,6 @@ jobs:
       
       - name: Verify instance structure
         run: |
-          test -f instances/ci-test/Dockerfile
-          test -f instances/ci-test/docker-compose.yml
-          test -f instances/ci-test/workspace/SOUL.md
+          test -f instances/ci-test/Dockerfile || (echo "ERROR: Dockerfile not found" && exit 1)
+          test -f instances/ci-test/docker-compose.yml || (echo "ERROR: docker-compose.yml not found" && exit 1)
+          test -f instances/ci-test/workspace/SOUL.md || (echo "ERROR: workspace/SOUL.md not found" && exit 1)
