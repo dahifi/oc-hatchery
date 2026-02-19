@@ -9,10 +9,12 @@ RUN addgroup -g 1001 -S openclaw && \
 
 WORKDIR /home/openclaw
 
+ARG OC_VERSION=latest
+
 # Install OpenClaw globally with verbose logging
 # Note: If openclaw package doesn't exist on npm, this will fail with a clear error
-RUN npm install -g openclaw@latest --verbose || \
-    (echo "ERROR: Failed to install openclaw@latest from npm" && \
+RUN npm install -g openclaw@${OC_VERSION} --verbose || \
+    (echo "ERROR: Failed to install openclaw@${OC_VERSION} from npm" && \
      echo "This likely means the package doesn't exist or isn't published yet" && \
      echo "Check https://www.npmjs.com/package/openclaw for availability" && \
      exit 1)

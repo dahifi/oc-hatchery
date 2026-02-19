@@ -13,6 +13,10 @@ At least **one** of the following LLM API keys must be set:
 
 ## Optional Variables
 
+### OpenClaw Version
+
+- `OC_VERSION` — Version of the `openclaw` npm package to install in the Docker image. Defaults to `latest`. Set to a specific version (e.g. `2026.2.17`) for reproducible builds.
+
 ### Discord Integration
 
 Only required if you want to connect OpenClaw to Discord:
