@@ -3,7 +3,7 @@ set -euo pipefail
 
 # entrypoint.sh — Run envsubst on openclaw config template, then start OpenClaw
 
-CONFIG_DIR="/home/openclaw/.openclaw"
+CONFIG_DIR="${CONFIG_DIR:-/home/openclaw/.openclaw}"
 TEMPLATE_FILE="$CONFIG_DIR/openclaw.template.json"
 CONFIG_FILE="$CONFIG_DIR/openclaw.json"
 
@@ -35,7 +35,56 @@ else
   export OPENAI_API_KEY="${OPENAI_API_KEY:-}"
   export XAI_API_KEY="${XAI_API_KEY:-}"
   export GOOGLE_API_KEY="${GOOGLE_API_KEY:-}"
-  
+
+  # Auto-detect LLM provider/model from available API keys if not explicitly set
+  if [[ -z "${LLM_PROVIDER:-}" ]]; then
+    _keys_set=0
+    [[ -n "${ANTHROPIC_API_KEY:-}" ]] && _keys_set=$((_keys_set + 1))
+    [[ -n "${OPENAI_API_KEY:-}" ]] && _keys_set=$((_keys_set + 1))
+    [[ -n "${XAI_API_KEY:-}" ]] && _keys_set=$((_keys_set + 1))
+    [[ -n "${GOOGLE_API_KEY:-}" ]] && _keys_set=$((_keys_set + 1))
+
+    if [[ $_keys_set -eq 1 ]]; then
+      if [[ -n "${OPENAI_API_KEY:-}" ]]; then
+        export LLM_PROVIDER="openai"
+        export LLM_MODEL="${LLM_MODEL:-gpt-4o}"
+        export LLM_API_KEY="${LLM_API_KEY:-$OPENAI_API_KEY}"
+      elif [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+        export LLM_PROVIDER="anthropic"
+        export LLM_MODEL="${LLM_MODEL:-claude-3-5-sonnet-20241022}"
+        export LLM_API_KEY="${LLM_API_KEY:-$ANTHROPIC_API_KEY}"
+      elif [[ -n "${GOOGLE_API_KEY:-}" ]]; then
+        export LLM_PROVIDER="google"
+        export LLM_MODEL="${LLM_MODEL:-gemini-2.0-flash}"
+        export LLM_API_KEY="${LLM_API_KEY:-$GOOGLE_API_KEY}"
+      elif [[ -n "${XAI_API_KEY:-}" ]]; then
+        export LLM_PROVIDER="xai"
+        export LLM_MODEL="${LLM_MODEL:-grok-3-mini}"
+        export LLM_API_KEY="${LLM_API_KEY:-$XAI_API_KEY}"
+      fi
+    else
+      # Multiple keys set: prefer anthropic if available, otherwise pick first available
+      if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
+        export LLM_PROVIDER="anthropic"
+        export LLM_MODEL="${LLM_MODEL:-claude-3-5-sonnet-20241022}"
+        export LLM_API_KEY="${LLM_API_KEY:-$ANTHROPIC_API_KEY}"
+      elif [[ -n "${OPENAI_API_KEY:-}" ]]; then
+        export LLM_PROVIDER="openai"
+        export LLM_MODEL="${LLM_MODEL:-gpt-4o}"
+        export LLM_API_KEY="${LLM_API_KEY:-$OPENAI_API_KEY}"
+      elif [[ -n "${GOOGLE_API_KEY:-}" ]]; then
+        export LLM_PROVIDER="google"
+        export LLM_MODEL="${LLM_MODEL:-gemini-2.0-flash}"
+        export LLM_API_KEY="${LLM_API_KEY:-$GOOGLE_API_KEY}"
+      elif [[ -n "${XAI_API_KEY:-}" ]]; then
+        export LLM_PROVIDER="xai"
+        export LLM_MODEL="${LLM_MODEL:-grok-3-mini}"
+        export LLM_API_KEY="${LLM_API_KEY:-$XAI_API_KEY}"
+      fi
+    fi
+  fi
+  echo "🤖 LLM provider: $LLM_PROVIDER, model: $LLM_MODEL"
+
   # Run envsubst to replace variables
   envsubst < "$TEMPLATE_FILE" > "$CONFIG_FILE"
   

@@ -11,6 +11,26 @@ At least **one** of the following LLM API keys must be set:
 - `XAI_API_KEY` — xAI API key (Grok)
 - `GOOGLE_API_KEY` — Google AI API key (Gemini)
 
+## Auto-Detected Variables
+
+The following variables are automatically set by `entrypoint.sh` based on which API key is available. You can override them explicitly if needed.
+
+- `LLM_PROVIDER` — LLM provider name (e.g. `anthropic`, `openai`, `google`, `xai`)
+- `LLM_MODEL` — Model name to use (e.g. `claude-3-5-sonnet-20241022`, `gpt-4o`)
+- `LLM_API_KEY` — The API key passed to the provider (resolved from the provider-specific key)
+
+**Auto-detection rules** (when `LLM_PROVIDER` is not set explicitly):
+
+| Keys set | Provider | Model |
+|---|---|---|
+| Only `ANTHROPIC_API_KEY` | `anthropic` | `claude-3-5-sonnet-20241022` |
+| Only `OPENAI_API_KEY` | `openai` | `gpt-4o` |
+| Only `GOOGLE_API_KEY` | `google` | `gemini-2.0-flash` |
+| Only `XAI_API_KEY` | `xai` | `grok-3-mini` |
+| Multiple keys | `anthropic` | `claude-3-5-sonnet-20241022` |
+
+You can override detection by setting `LLM_PROVIDER`, `LLM_MODEL`, and `LLM_API_KEY` explicitly in your `.env`.
+
 ## Optional Variables
 
 ### Discord Integration

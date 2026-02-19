@@ -158,7 +158,9 @@ fi
 # Test 10: Verify openclaw.template.json contains variable placeholders
 echo "Test 10: Verifying openclaw.template.json..."
 if [[ -f "$INSTANCE_DIR/openclaw.template.json" ]]; then
-  if grep -q '\$ANTHROPIC_API_KEY' "$INSTANCE_DIR/openclaw.template.json" && \
+  if grep -q '\$LLM_PROVIDER' "$INSTANCE_DIR/openclaw.template.json" && \
+     grep -q '\$LLM_MODEL' "$INSTANCE_DIR/openclaw.template.json" && \
+     grep -q '\$LLM_API_KEY' "$INSTANCE_DIR/openclaw.template.json" && \
      grep -q '\$DISCORD_BOT_TOKEN' "$INSTANCE_DIR/openclaw.template.json"; then
     test_pass "openclaw.template.json contains variable placeholders"
   else
