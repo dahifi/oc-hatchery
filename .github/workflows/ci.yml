@@ -1,0 +1,24 @@
+name: CI - Build and Test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Build Docker image
+        continue-on-error: true
+        run: docker build -t oc-hatchery-test template/
+      
+      - name: Test hatch.sh
+        run: ./scripts/hatch.sh ci-test --port 18799
+      
+      - name: Verify instance structure
+        run: |
+          test -f instances/ci-test/Dockerfile || (echo "ERROR: Dockerfile not found" && exit 1)
+          test -f instances/ci-test/docker-compose.yml || (echo "ERROR: docker-compose.yml not found" && exit 1)
+          test -f instances/ci-test/workspace/SOUL.md || (echo "ERROR: workspace/SOUL.md not found" && exit 1)
