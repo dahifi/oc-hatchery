@@ -9,6 +9,7 @@ set -euo pipefail
 #   stop [name]      — Stop instance(s)
 #   logs <name>      — Tail container logs
 #   update [name|--all] — Pull latest image and restart
+#   destroy <name> [--force] [--archive] — Tear down and remove an instance
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -228,9 +229,70 @@ case "$CMD" in
       exit 1
     fi
     ;;
-    
+
+  destroy)
+    name="${2:?Usage: fleet.sh destroy <name> [--force] [--archive]}"
+    instance_dir="$INSTANCES_DIR/$name"
+    FORCE=false
+    ARCHIVE=false
+
+    shift 2
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --force)   FORCE=true;   shift ;;
+        --archive) ARCHIVE=true; shift ;;
+        *) echo "Unknown option: $1" >&2; exit 1 ;;
+      esac
+    done
+
+    if [[ ! -d "$instance_dir" ]]; then
+      echo "Error: Instance '$name' not found" >&2
+      exit 1
+    fi
+
+    if [[ "$FORCE" != "true" ]]; then
+      printf "Destroy instance '%s'? This cannot be undone. [y/N] " "$name"
+      read -r answer
+      if [[ "$answer" != "y" && "$answer" != "Y" ]]; then
+        echo "Aborted."
+        exit 0
+      fi
+    fi
+
+    # Stop container
+    if [[ -f "$instance_dir/docker-compose.yml" ]]; then
+      echo "Stopping $name..."
+      (cd "$instance_dir" && docker compose down -v) 2>/dev/null || true
+    fi
+
+    # Optionally archive workspace
+    if [[ "$ARCHIVE" == "true" ]]; then
+      timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+      archive_path="$ROOT_DIR/archives/${name}-${timestamp}.tar.gz"
+      mkdir -p "$ROOT_DIR/archives"
+      echo "Archiving workspace to $archive_path..."
+      if tar -czf "$archive_path" -C "$INSTANCES_DIR" "$name"; then
+        echo "  ✓ Archived to $archive_path"
+      else
+        echo "Error: Failed to create archive at $archive_path" >&2
+        exit 1
+      fi
+    fi
+
+    # Remove from fleet.json
+    if [[ -f "$FLEET_REGISTRY" ]]; then
+      tmp_file=$(mktemp)
+      jq "del(.instances[\"$name\"])" "$FLEET_REGISTRY" > "$tmp_file" && mv "$tmp_file" "$FLEET_REGISTRY"
+    fi
+
+    # Remove instance directory
+    rm -rf "$instance_dir"
+
+    echo "✓ Instance '$name' destroyed."
+    ;;
+
   *)
-    echo "Usage: fleet.sh {status|health|start [name]|stop [name]|logs <name>|update <name|--all>}" >&2
+    echo "Usage: fleet.sh {status|health|start [name]|stop [name]|logs <name>|update <name|--all>|destroy <name> [--force] [--archive]}" >&2
     exit 1
     ;;
 esac

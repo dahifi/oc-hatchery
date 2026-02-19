@@ -205,6 +205,70 @@ else
   test_fail "Timestamp not in expected format: $created"
 fi
 
+# Test 9: destroy --force removes instance directory and fleet.json entry
+echo "Test 9: destroy --force removes instance..."
+TEST_DESTROY="test-destroy-$(date +%s)"
+if "$SCRIPT_DIR/hatch.sh" "$TEST_DESTROY" > /dev/null 2>&1; then
+  if "$SCRIPT_DIR/fleet.sh" destroy "$TEST_DESTROY" --force > /dev/null 2>&1; then
+    if [[ ! -d "$ROOT_DIR/instances/$TEST_DESTROY" ]]; then
+      test_pass "Instance directory removed by destroy"
+    else
+      test_fail "Instance directory still exists after destroy"
+      rm -rf "$ROOT_DIR/instances/$TEST_DESTROY"
+    fi
+    if ! jq -e ".instances[\"$TEST_DESTROY\"]" "$FLEET_REGISTRY" > /dev/null 2>&1; then
+      test_pass "Instance removed from fleet.json by destroy"
+    else
+      test_fail "Instance still in fleet.json after destroy"
+      tmp_file=$(mktemp)
+      jq "del(.instances[\"$TEST_DESTROY\"])" "$FLEET_REGISTRY" > "$tmp_file" && mv "$tmp_file" "$FLEET_REGISTRY"
+    fi
+  else
+    test_fail "fleet.sh destroy --force failed"
+    rm -rf "$ROOT_DIR/instances/$TEST_DESTROY"
+    tmp_file=$(mktemp)
+    jq "del(.instances[\"$TEST_DESTROY\"])" "$FLEET_REGISTRY" > "$tmp_file" && mv "$tmp_file" "$FLEET_REGISTRY"
+  fi
+else
+  test_fail "Failed to create instance for destroy test"
+fi
+
+# Test 10: destroy --force --archive saves a tarball before removal
+echo "Test 10: destroy --archive saves workspace..."
+TEST_ARCHIVE="test-archive-$(date +%s)"
+if "$SCRIPT_DIR/hatch.sh" "$TEST_ARCHIVE" > /dev/null 2>&1; then
+  if "$SCRIPT_DIR/fleet.sh" destroy "$TEST_ARCHIVE" --force --archive > /dev/null 2>&1; then
+    archive_file=$(ls "$ROOT_DIR/archives/${TEST_ARCHIVE}-"*.tar.gz 2>/dev/null | head -1)
+    if [[ -n "$archive_file" && -f "$archive_file" ]]; then
+      test_pass "Archive created at $archive_file"
+      rm -f "$archive_file"
+    else
+      test_fail "No archive file found after destroy --archive"
+    fi
+    if [[ ! -d "$ROOT_DIR/instances/$TEST_ARCHIVE" ]]; then
+      test_pass "Instance directory removed when --archive used"
+    else
+      test_fail "Instance directory still exists after destroy --archive"
+      rm -rf "$ROOT_DIR/instances/$TEST_ARCHIVE"
+    fi
+  else
+    test_fail "fleet.sh destroy --force --archive failed"
+    rm -rf "$ROOT_DIR/instances/$TEST_ARCHIVE"
+    tmp_file=$(mktemp)
+    jq "del(.instances[\"$TEST_ARCHIVE\"])" "$FLEET_REGISTRY" > "$tmp_file" && mv "$tmp_file" "$FLEET_REGISTRY"
+  fi
+else
+  test_fail "Failed to create instance for archive test"
+fi
+
+# Test 11: destroy nonexistent instance errors
+echo "Test 11: destroy nonexistent instance..."
+if ! "$SCRIPT_DIR/fleet.sh" destroy "no-such-instance-xyz" --force > /dev/null 2>&1; then
+  test_pass "destroy correctly errors on nonexistent instance"
+else
+  test_fail "destroy should have failed on nonexistent instance"
+fi
+
 # Summary
 echo ""
 echo "========================================"
