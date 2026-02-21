@@ -4,6 +4,7 @@ set -euo pipefail
 # fleet.sh — Manage Hatchery instances
 # Usage: ./scripts/fleet.sh <command> [args]
 #   status           — Show status of all instances
+#   health           — Curl each instance /health endpoint and report status
 #   start [name]     — Start instance(s)
 #   stop [name]      — Stop instance(s)
 #   logs <name>      — Tail container logs
@@ -134,6 +135,63 @@ case "$CMD" in
     docker logs -f "$container" 2>&1
     ;;
     
+  health)
+    echo "🦞 Hatchery Fleet Health"
+    echo "========================"
+
+    if [[ ! -f "$FLEET_REGISTRY" ]]; then
+      echo "  (no fleet.json found)"
+      exit 0
+    fi
+
+    instances=$(jq -r '.instances | keys[]' "$FLEET_REGISTRY" 2>/dev/null || true)
+    if [[ -z "$instances" ]]; then
+      echo "  (no instances registered)"
+      exit 0
+    fi
+
+    printf "  %-25s %-8s %-12s %s\n" "INSTANCE" "PORT" "HTTP" "RESPONSE TIME"
+    printf "  %-25s %-8s %-12s %s\n" "--------" "----" "----" "-------------"
+
+    while IFS= read -r name; do
+      port=$(jq -r ".instances[\"$name\"].port" "$FLEET_REGISTRY")
+      host=$(jq -r ".instances[\"$name\"].host // \"localhost\"" "$FLEET_REGISTRY")
+      ssh_host=$(jq -r ".instances[\"$name\"].ssh_host // empty" "$FLEET_REGISTRY" 2>/dev/null || true)
+      ssh_user=$(jq -r ".instances[\"$name\"].ssh_user // empty" "$FLEET_REGISTRY" 2>/dev/null || true)
+
+      url="http://${host}:${port}/health"
+      ctrl_socket=""
+
+      # Set up SSH tunnel if ssh_host is configured
+      if [[ -n "${ssh_host:-}" ]]; then
+        ctrl_socket="/tmp/oc-hatch-ssh-$$-${name}"
+        ssh_target="${ssh_user:+${ssh_user}@}${ssh_host}"
+        local_port=$(( ( RANDOM % 10000 ) + 50000 ))
+        if ssh -fNM -S "$ctrl_socket" \
+             -L "${local_port}:localhost:${port}" "$ssh_target" \
+             -o StrictHostKeyChecking=accept-new -o ConnectTimeout=5 2>/dev/null; then
+          sleep 1
+          url="http://localhost:${local_port}/health"
+        else
+          ctrl_socket=""
+        fi
+      fi
+
+      # Curl the health endpoint; capture HTTP status and response time in one request
+      result=$(curl -s -o /dev/null -w "%{http_code} %{time_total}" \
+        --connect-timeout 5 --max-time 10 "$url" 2>/dev/null || echo "000 0")
+      http_status=$(echo "$result" | awk '{print $1}')
+      response_time=$(echo "$result" | awk '{printf "%.3fs", $2}')
+
+      # Close SSH tunnel if we opened one
+      if [[ -n "$ctrl_socket" ]] && [[ -S "$ctrl_socket" ]]; then
+        ssh -S "$ctrl_socket" -O exit "$ssh_target" 2>/dev/null || true
+      fi
+
+      printf "  %-25s %-8s %-12s %s\n" "$name" "$port" "$http_status" "$response_time"
+    done <<< "$instances"
+    ;;
+
   update)
     target="${2:-}"
     
@@ -172,7 +230,7 @@ case "$CMD" in
     ;;
     
   *)
-    echo "Usage: fleet.sh {status|start [name]|stop [name]|logs <name>|update <name|--all>}" >&2
+    echo "Usage: fleet.sh {status|health|start [name]|stop [name]|logs <name>|update <name|--all>}" >&2
     exit 1
     ;;
 esac

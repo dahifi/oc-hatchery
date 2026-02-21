@@ -148,6 +148,38 @@ else
   test_fail "fleet.sh status failed"
 fi
 
+# Test 9: Test fleet.sh health command runs successfully
+echo "Test 9: Fleet health command..."
+if "$SCRIPT_DIR/fleet.sh" health > /dev/null 2>&1; then
+  test_pass "fleet.sh health executed successfully"
+else
+  test_fail "fleet.sh health failed"
+fi
+
+# Test 10: Verify fleet.sh health output format
+echo "Test 10: Fleet health output format..."
+health_output=$("$SCRIPT_DIR/fleet.sh" health 2>&1)
+if echo "$health_output" | grep -q "INSTANCE"; then
+  test_pass "fleet.sh health shows INSTANCE header"
+else
+  test_fail "fleet.sh health missing INSTANCE header"
+fi
+if echo "$health_output" | grep -q "HTTP"; then
+  test_pass "fleet.sh health shows HTTP header"
+else
+  test_fail "fleet.sh health missing HTTP header"
+fi
+if echo "$health_output" | grep -q "RESPONSE TIME"; then
+  test_pass "fleet.sh health shows RESPONSE TIME header"
+else
+  test_fail "fleet.sh health missing RESPONSE TIME header"
+fi
+if echo "$health_output" | grep -q "$TEST_INSTANCE1"; then
+  test_pass "fleet.sh health lists test instance"
+else
+  test_fail "fleet.sh health does not list test instance"
+fi
+
 # Test 7: Verify fleet.json structure
 echo "Test 7: Verifying fleet.json structure..."
 if jq -e '.instances' "$FLEET_REGISTRY" > /dev/null 2>&1; then
