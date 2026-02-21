@@ -97,5 +97,8 @@ else
   fi
 fi
 
+# Run doctor to fix any issues before starting
+openclaw doctor --fix 2>/dev/null || true
+
 echo "🚀 Starting OpenClaw..."
 exec "$@"
