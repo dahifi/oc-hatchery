@@ -291,8 +291,106 @@ case "$CMD" in
     echo "✓ Instance '$name' destroyed."
     ;;
 
+  monitor)
+    # Monitor fleet health — similar to health but with pass/fail logic
+    FLEET_HOST="${FLEET_HOST:-localhost}"
+    JSON_OUTPUT=false
+    shift
+    while [[ $# -gt 0 ]]; do
+      case "$1" in
+        --json) JSON_OUTPUT=true; shift ;;
+        *) shift ;;
+      esac
+    done
+
+    if [[ ! -f "$FLEET_REGISTRY" ]]; then
+      if [[ "$JSON_OUTPUT" == "true" ]]; then
+        echo '{"status":"error","message":"no fleet.json found"}'
+      else
+        echo "Error: no fleet.json found" >&2
+      fi
+      exit 1
+    fi
+
+    instances=$(jq -r '.instances | to_entries[] | select(.value.status == "running") | .key' "$FLEET_REGISTRY" 2>/dev/null || true)
+    if [[ -z "$instances" ]]; then
+      if [[ "$JSON_OUTPUT" == "true" ]]; then
+        echo '{"status":"ok","message":"no running instances","results":[]}'
+      else
+        echo "No running instances to monitor."
+      fi
+      exit 0
+    fi
+
+    all_healthy=true
+    json_results="[]"
+
+    while IFS= read -r name; do
+      port=$(jq -r ".instances[\"$name\"].port" "$FLEET_REGISTRY")
+      host=$(jq -r ".instances[\"$name\"].host // \"$FLEET_HOST\"" "$FLEET_REGISTRY")
+      url="http://${host}:${port}/health"
+
+      http_code=$(curl -s -o /dev/null -w "%{http_code}" --connect-timeout 5 --max-time 10 "$url" 2>/dev/null || echo "000")
+
+      if [[ "$http_code" == "200" ]]; then
+        healthy=true
+      else
+        healthy=false
+        all_healthy=false
+      fi
+
+      if [[ "$JSON_OUTPUT" == "true" ]]; then
+        json_results=$(echo "$json_results" | jq --arg n "$name" --arg h "$healthy" --arg c "$http_code" \
+          '. + [{"name":$n,"healthy":($h == "true"),"http_status":($c | tonumber)}]')
+      else
+        if [[ "$healthy" == "false" ]]; then
+          echo "$name UNHEALTHY (HTTP $http_code)"
+        fi
+      fi
+    done <<< "$instances"
+
+    if [[ "$JSON_OUTPUT" == "true" ]]; then
+      jq -n --argjson results "$json_results" --arg healthy "$all_healthy" \
+        '{"status":(if $healthy == "true" then "healthy" else "unhealthy" end),"results":$results}'
+    else
+      if [[ "$all_healthy" == "true" ]]; then
+        echo "All instances healthy"
+      fi
+    fi
+    ;;
+
+  snapshot)
+    name="${2:?Usage: fleet.sh snapshot <instance-name>}"
+    container="hatchery-${name}"
+    timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+    tmp_dir="/tmp/snapshot-${name}-${timestamp}"
+    snapshot_dir="$ROOT_DIR/snapshots"
+    snapshot_path="${snapshot_dir}/${name}-${timestamp}.tar.gz"
+
+    # Use NAS Docker env vars
+    export DOCKER_HOST="${DOCKER_HOST:-tcp://192.168.1.2:2376}"
+    export DOCKER_TLS_VERIFY="${DOCKER_TLS_VERIFY:-1}"
+    export DOCKER_CERT_PATH="${DOCKER_CERT_PATH:-$HOME/.docker/nas}"
+
+    echo "📸 Snapshotting $name ($container)..."
+
+    # Copy openclaw state from container
+    docker cp "${container}:/home/openclaw/.openclaw" "$tmp_dir"
+    if [[ $? -ne 0 ]]; then
+      echo "Error: Failed to copy from container '$container'" >&2
+      exit 1
+    fi
+
+    # Tar it up
+    mkdir -p "$snapshot_dir"
+    tar -czf "$snapshot_path" -C "/tmp" "snapshot-${name}-${timestamp}"
+    rm -rf "$tmp_dir"
+
+    echo "✅ Snapshot saved: $snapshot_path"
+    ;;
+
   *)
-    echo "Usage: fleet.sh {status|health|start [name]|stop [name]|logs <name>|update <name|--all>|destroy <name> [--force] [--archive]}" >&2
+    echo "Usage: fleet.sh {status|health|start|stop|logs|update|destroy|monitor|snapshot}" >&2
     exit 1
     ;;
 esac

@@ -1,21 +1,18 @@
 # OpenClaw Quickstart Dockerfile
-FROM node:22-alpine
+FROM node:22-slim
 
-RUN apk add --no-cache git curl bash gettext
+RUN apt-get update && apt-get install -y --no-install-recommends git curl bash ca-certificates && rm -rf /var/lib/apt/lists/*
 
 # Create openclaw user
-RUN addgroup -g 1001 -S openclaw && \
-    adduser -S openclaw -u 1001 -G openclaw
+RUN groupadd -g 1001 openclaw && useradd -u 1001 -g openclaw -m openclaw
 
 WORKDIR /home/openclaw
 
 ARG OC_VERSION=latest
 
-# Install OpenClaw globally with verbose logging
-# Note: If openclaw package doesn't exist on npm, this will fail with a clear error
+# Install OpenClaw globally
 RUN npm install -g openclaw@${OC_VERSION} --verbose || \
     (echo "ERROR: Failed to install openclaw@${OC_VERSION} from npm" && \
-     echo "This likely means the package doesn't exist or isn't published yet" && \
      echo "Check https://www.npmjs.com/package/openclaw for availability" && \
      exit 1)
 
