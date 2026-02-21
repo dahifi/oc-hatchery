@@ -16,3 +16,4 @@ fleet.json
 # OS
 .DS_Store
 instances/
+archives/
