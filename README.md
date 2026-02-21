@@ -100,6 +100,14 @@ cd instances/my-advisor && docker compose down
 - Manually specify a port with `./scripts/hatch.sh my-instance --port 18800`
 - Port assignments are tracked in `fleet.json` to prevent conflicts
 
+**Remote Deploy via SSH:**
+```bash
+# Deploy directly to a remote host
+./scripts/hatch.sh my-instance --port 18800 --host ssh://user@hostname --path /opt/hatchery/instances/my-instance
+```
+This scaffolds the instance locally, rsyncs files to the remote host, and runs `docker compose up -d --build` there.
+The `--path` flag is optional (defaults to `/opt/hatchery/instances/<name>`).
+
 See [TESTING.md](TESTING.md) for troubleshooting.
 
 ## Testing

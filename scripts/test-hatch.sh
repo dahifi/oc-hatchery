@@ -194,6 +194,42 @@ else
   test_fail ".gitignore not found"
 fi
 
+# Test 13: Verify --host invalid format is rejected
+echo "Test 13: Verifying --host rejects invalid format..."
+if ! "$SCRIPT_DIR/hatch.sh" "test-invalid-host-$$" --port 18799 --host "notanurl" 2>/dev/null; then
+  test_pass "--host with invalid format correctly rejected"
+else
+  test_fail "--host with invalid format should have been rejected"
+  rm -rf "$ROOT_DIR/instances/test-invalid-host-$$" 2>/dev/null || true
+fi
+
+# Test 14: Verify --host ssh://user@host stores ssh_host/ssh_user in fleet.json (local scaffold, no SSH)
+echo "Test 14: Verifying --host ssh://user@host is parsed and stored in fleet.json..."
+TEST_SSH_INSTANCE="test-ssh-$$"
+TEST_SSH_DIR="$ROOT_DIR/instances/$TEST_SSH_INSTANCE"
+# Stub ssh and rsync to succeed without connecting
+SSH_STUB_DIR=$(mktemp -d)
+printf '%s\n' '#!/bin/sh' 'exit 0' > "$SSH_STUB_DIR/ssh"
+printf '%s\n' '#!/bin/sh' 'exit 0' > "$SSH_STUB_DIR/rsync"
+chmod +x "$SSH_STUB_DIR/ssh" "$SSH_STUB_DIR/rsync"
+if PATH="$SSH_STUB_DIR:$PATH" "$SCRIPT_DIR/hatch.sh" "$TEST_SSH_INSTANCE" --port 18798 --host ssh://testuser@testhost --path /tmp/test-path > /dev/null 2>&1; then
+  # Verify ssh_host and ssh_user in fleet.json
+  ssh_host_val=$(jq -r ".instances[\"$TEST_SSH_INSTANCE\"].ssh_host // empty" "$ROOT_DIR/fleet.json" 2>/dev/null || true)
+  ssh_user_val=$(jq -r ".instances[\"$TEST_SSH_INSTANCE\"].ssh_user // empty" "$ROOT_DIR/fleet.json" 2>/dev/null || true)
+  if [[ "$ssh_host_val" == "testhost" ]] && [[ "$ssh_user_val" == "testuser" ]]; then
+    test_pass "ssh_host and ssh_user stored in fleet.json"
+  else
+    test_fail "ssh_host/ssh_user not correctly stored (got host='$ssh_host_val' user='$ssh_user_val')"
+  fi
+  # cleanup
+  rm -rf "$TEST_SSH_DIR" "$SSH_STUB_DIR" 2>/dev/null || true
+  tmp_file=$(mktemp)
+  jq "del(.instances[\"$TEST_SSH_INSTANCE\"])" "$ROOT_DIR/fleet.json" > "$tmp_file" && mv "$tmp_file" "$ROOT_DIR/fleet.json"
+else
+  test_fail "--host ssh://user@host invocation failed unexpectedly"
+  rm -rf "$TEST_SSH_DIR" "$SSH_STUB_DIR" 2>/dev/null || true
+fi
+
 # Summary
 echo ""
 echo "========================================"
