@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # hatch.sh — Create a new Hatchery instance from template
-# Usage: ./scripts/hatch.sh <name> [--port PORT]
+# Usage: ./scripts/hatch.sh <name> [--port PORT] [--host ssh://user@host] [--path /remote/path]
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -10,17 +10,42 @@ TEMPLATE_DIR="$ROOT_DIR/template"
 INSTANCES_DIR="$ROOT_DIR/instances"
 FLEET_REGISTRY="$ROOT_DIR/fleet.json"
 
-NAME="${1:?Usage: hatch.sh <name> [--port PORT]}"
+NAME="${1:?Usage: hatch.sh <name> [--port PORT] [--host ssh://user@host] [--path /remote/path]}"
 PORT=""
 AUTO_PORT=false
+SSH_HOST=""
+SSH_USER=""
+REMOTE_PATH=""
 
 shift
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --port) PORT="$2"; shift 2 ;;
+    --host)
+      host_arg="$2"
+      if [[ "$host_arg" =~ ^ssh://([^@]+)@(.+)$ ]]; then
+        SSH_USER="${BASH_REMATCH[1]}"
+        SSH_HOST="${BASH_REMATCH[2]}"
+      elif [[ "$host_arg" =~ ^ssh://(.+)$ ]]; then
+        SSH_HOST="${BASH_REMATCH[1]}"
+      else
+        echo "Error: Invalid --host format. Expected ssh://[user@]host" >&2
+        exit 1
+      fi
+      shift 2
+      ;;
+    --path) REMOTE_PATH="$2"; shift 2 ;;
     *) echo "Unknown option: $1" >&2; exit 1 ;;
   esac
 done
+
+# Validate --path when --host is provided
+if [[ -n "$SSH_HOST" && -n "$REMOTE_PATH" ]]; then
+  if [[ ! "$REMOTE_PATH" =~ ^/[a-zA-Z0-9/_.-]+$ ]]; then
+    echo "Error: --path must be an absolute path with only alphanumeric, '/', '-', '_', '.' characters" >&2
+    exit 1
+  fi
+fi
 
 # Initialize fleet registry if it doesn't exist
 if [[ ! -f "$FLEET_REGISTRY" ]]; then
@@ -122,7 +147,10 @@ EOF
 # Update fleet registry
 tmp_file=$(mktemp)
 jq --arg name "$NAME" --arg port "$PORT" --arg created "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-  '.instances[$name] = {port: ($port | tonumber), created: $created}' \
+   --arg ssh_host "$SSH_HOST" --arg ssh_user "$SSH_USER" \
+  '.instances[$name] = {port: ($port | tonumber), created: $created} |
+   if $ssh_host != "" then .instances[$name].ssh_host = $ssh_host else . end |
+   if $ssh_user != "" then .instances[$name].ssh_user = $ssh_user else . end' \
   "$FLEET_REGISTRY" > "$tmp_file" && mv "$tmp_file" "$FLEET_REGISTRY"
 
 echo ""
@@ -131,13 +159,41 @@ if [[ "$AUTO_PORT" == "true" ]]; then
 else
   echo "✅ Instance created at: $INSTANCE_DIR"
 fi
-echo ""
-echo "Next steps:"
-echo "  1. Edit workspace files (SOUL.md, IDENTITY.md, USER.md)"
-echo "  2. Add reference docs to workspace/reference/"
-echo "  3. Copy .env.example to .env and add API keys:"
-echo "     cp $INSTANCE_DIR/.env.example $INSTANCE_DIR/.env"
-echo "  4. Launch:"
-echo "     cd $INSTANCE_DIR && docker compose up -d"
+
+# Remote deploy via SSH
+if [[ -n "$SSH_HOST" ]]; then
+  SSH_TARGET="${SSH_USER:+${SSH_USER}@}${SSH_HOST}"
+  DEST_PATH="${REMOTE_PATH:-/opt/hatchery/instances/$NAME}"
+
+  # Validate default DEST_PATH (only needed when REMOTE_PATH was not set)
+  if [[ -z "$REMOTE_PATH" && ! "$DEST_PATH" =~ ^/[a-zA-Z0-9/_.-]+$ ]]; then
+    echo "Error: computed remote path contains unsafe characters: $DEST_PATH" >&2
+    exit 1
+  fi
+
+  echo ""
+  echo "🚀 Deploying to ${SSH_TARGET}:${DEST_PATH}..."
+
+  ssh "$SSH_TARGET" "mkdir -p $(printf '%q' "$DEST_PATH")"
+  rsync -az "$INSTANCE_DIR/" "${SSH_TARGET}:${DEST_PATH}/"
+  ssh "$SSH_TARGET" "cd $(printf '%q' "$DEST_PATH") && docker compose up -d --build"
+
+  echo ""
+  echo "✅ Deployed to ${SSH_TARGET}:${DEST_PATH}"
+  echo ""
+  echo "Next steps:"
+  echo "  1. Edit workspace files on the remote host or push updates with rsync"
+  echo "  2. Copy .env.example to .env on the remote and add API keys:"
+  echo "     ssh ${SSH_TARGET} \"cp ${DEST_PATH}/.env.example ${DEST_PATH}/.env\""
+else
+  echo ""
+  echo "Next steps:"
+  echo "  1. Edit workspace files (SOUL.md, IDENTITY.md, USER.md)"
+  echo "  2. Add reference docs to workspace/reference/"
+  echo "  3. Copy .env.example to .env and add API keys:"
+  echo "     cp $INSTANCE_DIR/.env.example $INSTANCE_DIR/.env"
+  echo "  4. Launch:"
+  echo "     cd $INSTANCE_DIR && docker compose up -d"
+fi
 echo ""
 echo "🦞 Happy hatching!"
