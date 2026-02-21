@@ -19,6 +19,9 @@ jobs:
     - name: Run quick test
       run: ./scripts/test-hatch.sh
     
+    - name: Run auto-detect test
+      run: ./scripts/test-autodetect.sh
+    
     - name: Check instances directory
       run: |
         echo "Instances created during test:"

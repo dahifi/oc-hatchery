@@ -1,8 +1,8 @@
 {
   "llm": {
-    "provider": "anthropic",
-    "apiKey": "$ANTHROPIC_API_KEY",
-    "model": "claude-3-5-sonnet-20241022"
+    "provider": "$LLM_PROVIDER",
+    "apiKey": "$LLM_API_KEY",
+    "model": "$LLM_MODEL"
   },
   "discord": {
     "enabled": false,
